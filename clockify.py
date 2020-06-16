@@ -1,6 +1,8 @@
 import requests
 import login_info
 import json
+import time
+import datetime
 
 """ 
     Handle HTTP GET and POST requests for Clockify API
@@ -20,13 +22,12 @@ def get_tags():
     return requests.get(url=URL, headers=headers).json()
 
 
-
+def get_time():
+    """ return datetime.now() formatted as a string for API input """
+    return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 
 
 if __name__ == '__main__':
-    print(type(get_tags()))
-    d = get_tags()
-    a = [x for x in d if 'Power BI' in x['name']]
-    print(a)
+    print(get_time())
