@@ -24,7 +24,12 @@ def get_tags():
 
 def get_time():
     """ return datetime.now() formatted as a string for API input """
-    return datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ") # time string formatted according to Clockify API requirements
+
+
+def create_time_entry():
+    """ create new time entry using time and tags as input """ 
+
 
 
 
