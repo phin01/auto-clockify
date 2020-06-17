@@ -1,7 +1,9 @@
 import time
 from win32gui import GetWindowText, GetForegroundWindow
 import clockify
-import json
+import atexit
+import signal
+import win32api
 
 """ 
     logic inspired by ssokolow's gist:
@@ -11,30 +13,26 @@ import json
 
 
 # variables
-last_seen = {'xid': None, 'title': None, 'program': None}    
+last_seen = {'xid': None, 'title': None, 'program': None, 'tags': None}    
 exec_interval = 1 # interval in seconds to check for window changes in main time.sleep loop
 tags = clockify.get_tags() # list of tags from Clockify API
+minimized = False # all windows minimized (stops time entries)
+undefined_entry = False # untagged window (crate untagged time entry, including only window name, for manual tagging in clockify dashboard)
 
 
-# receive window text and return program name
-def get_selected_program(win_title: str):
-    switcher = { # get specific windows title substrings and translate to used programs
-        'CHROME': 'Web Browser',
-        'VISUAL STUDIO CODE': 'VS Code',
-        'POWER BI': 'Power BI',
-        'KNIME': 'KNIME',
-    }
-    res = dict(filter(lambda item: item[0] in win_title.upper(), switcher.items())) # filter new dictionary with first occurrence of substring
-    if len(res.keys()) > 0 and list(res.values())[0] is not None: # return value if available
-        return list(res.values())[0]
-
-
-def get_program_tag(win_title: str):
-    filtered_tags = [tag for tag in tags if tag['name'].upper() in win_title.upper()]
+def get_window_tags(win_title: str) -> list:
+    filtered_tags = [tag['id'] for tag in tags if tag['name'].upper() in win_title.upper()] # return list of tag IDs if tag name matches any part of window name
     if filtered_tags:
-        print(filtered_tags[0]['id'])
-        print(filtered_tags[0]['name'])
+        return filtered_tags
 
+
+def reset_last_seen(new_title=None, new_tags=None):
+    last_seen['title'] = new_title
+    last_seen['tags'] = new_tags
+
+
+def handle_exit():
+    clockify.stop_time_entry(clockify.get_time())
 
 
 if __name__ == '__main__':
@@ -42,20 +40,37 @@ if __name__ == '__main__':
     # initialize last_seen window and program with first available window after running script
     wnd = GetWindowText(GetForegroundWindow())
     last_seen['title'] = wnd
-    last_seen['program'] = get_selected_program(wnd)
+    last_seen['tags'] = get_window_tags(wnd)
 
     while True:
         new_win_title = GetWindowText(GetForegroundWindow()) # get current window text
+        new_win_tags = get_window_tags(new_win_title) # get current window tags
 
-        if new_win_title != last_seen['title'] and new_win_title: # if it's valid and different from last window
+        if not new_win_title and not minimized: # stops current time entry if all windows are minimized
+            minimized = True
+            clockify.stop_time_entry(clockify.get_time())
+            reset_last_seen()
 
-            new_program = get_selected_program(new_win_title) # get new program from new window
-            new_tag = get_program_tag(new_win_title)
-            
-            if new_program: # if new program requires clock switch
-                last_seen['title'] = new_win_title
-                print('call clockify API - ' + new_program)
-                # print('call clockify API - ' + new_tag)
+        elif new_win_title and not new_win_tags and new_win_title != last_seen['title']: # create untagged time entry in case no tags are found
+            minimized = False
+            entry_time = clockify.get_time()
+            clockify.stop_time_entry(entry_time)
+            clockify.create_time_entry(entry_time, new_win_title)
+            reset_last_seen(new_win_title)
+
+        elif new_win_title and new_win_tags != last_seen['tags']: # create regular tagged entry
+            minimized = False
+            entry_time = clockify.get_time()
+            clockify.stop_time_entry(entry_time)
+            clockify.create_time_entry(entry_time, new_win_title, new_win_tags)
+            reset_last_seen(new_win_title, new_win_tags)
+
         time.sleep(exec_interval)
+
+
+
+
+
+
 
     

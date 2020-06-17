@@ -5,7 +5,7 @@ import time
 import datetime
 
 """ 
-    Handle HTTP GET and POST requests for Clockify API
+    Handle HTTP requests for Clockify API
 
 """
 
@@ -28,18 +28,19 @@ def get_time() -> str:
     return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ") # time string formatted according to Clockify API requirements
 
 
-def create_time_entry(time: str, tags=[]) -> bool:
+def create_time_entry(time: str, title: str, tags=[]) -> bool:
     """ 
         create new time entry using time(str) and tags(list) as input
         return True if status_code is 201 from a successful request
      """
     URL = API_URL + 'workspaces/' + WSPACE + '/time-entries'
     headers = {'X-Api-Key': API_KEY, 'Content-Type': 'application/json'} 
-    body = {
+    payload = {
          "start": time,
+         "description": title,
          "tagIds": tags
     }
-    r = requests.post(url=URL, headers=headers, json=body)
+    r = requests.post(url=URL, headers=headers, json=payload)
     return r.status_code == 201 # success
 
 
@@ -50,22 +51,12 @@ def stop_time_entry(time: str) -> bool:
      """
     URL = API_URL + 'workspaces/' + WSPACE + '/user/' + USER + '/time-entries'
     headers = {'X-Api-Key': API_KEY, 'Content-Type': 'application/json'}
-    body = { 
+    payload = { 
          "end": time
     } 
-    r = requests.patch(url=URL, headers=headers, json=body)
+    r = requests.patch(url=URL, headers=headers, json=payload)
     return r.status_code == 200 or r.status_code == 404 # successfully stopped or no running time entries to be stopped
 
 
-
-
-if __name__ == '__main__':
-    # print(get_tags())
-    tags = get_tags()
-    tag_ids = []
-    for tag in tags:
-        tag_ids.append(tag['id'])
-
-    print(create_time_entry(get_time(), tag_ids))
-    time.sleep(2)
-    print(stop_time_entry(get_time()))
+# if __name__ == '__main__':
+  
