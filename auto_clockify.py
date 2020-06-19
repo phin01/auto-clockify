@@ -1,9 +1,5 @@
-import time
 from win32gui import GetWindowText, GetForegroundWindow
-import clockify
-import atexit
-import signal
-import win32api
+from call_clockify import CallClockify
 
 """ 
     logic inspired by ssokolow's gist:
@@ -13,9 +9,10 @@ import win32api
 
 
 # variables
+clockify = CallClockify() # object to handle all API calls to Clockify
+tags = clockify.get_tags() # list of tags from Clockify API
 last_seen = {'xid': None, 'title': None, 'program': None, 'tags': None}    
 exec_interval = 1 # interval in seconds to check for window changes in main time.sleep loop
-tags = clockify.get_tags() # list of tags from Clockify API
 minimized = False # all windows minimized (stops time entries)
 undefined_entry = False # untagged window (crate untagged time entry, including only window name, for manual tagging in clockify dashboard)
 
