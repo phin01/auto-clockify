@@ -3,6 +3,7 @@ import login_info
 import json
 import time
 import datetime
+from login_info import LoginInfo
 
 """ 
     Handle HTTP requests for Clockify API
@@ -12,9 +13,11 @@ import datetime
 
 # variables
 API_URL = 'https://api.clockify.me/api/v1/' # clockify API root URL
-API_KEY = login_info.get_api_key() # API key
-WSPACE = login_info.get_workspace() # workspace ID
-USER = login_info.get_user() # Clockify user
+
+loginInfo = LoginInfo()
+API_KEY = loginInfo.get_api_key() # API key
+WSPACE = loginInfo.get_workspace() # workspace ID
+USER = loginInfo.get_user() # Clockify user
 
 def get_tags() -> list:
     """ return list of tags from workspace """
