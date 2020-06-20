@@ -1,7 +1,7 @@
 import time
 from win32gui import GetWindowText, GetForegroundWindow
 from call_clockify import CallClockify
-
+import threading
 
 class AutoClockify():
 
@@ -25,7 +25,7 @@ class AutoClockify():
         self.last_seen['title'] = wnd
         self.last_seen['tags'] = self.get_window_tags(wnd)
 
-        self.start_loop()
+        # self.start_loop()
 
 
     def get_window_tags(self, win_title: str) -> list:
@@ -60,32 +60,20 @@ class AutoClockify():
             self.clockify.create_time_entry(entry_time, new_win_title, new_win_tags)
 
 
-    def start_loop(self):
-        """ loop to monitor window changes and call API as needed """
-        while True:
-            new_win_title = GetWindowText(GetForegroundWindow()) # get current window text
-            new_win_tags = self.get_window_tags(new_win_title) # get current window tags
+    def check_window_change(self):
+        """
+            check current window's title and tags
+            compare to previous info stored in last_seen list and calls API if changes are needed
+            this function will be called from systray in a separate thread loop every x seconds
+        """
+        new_win_title = GetWindowText(GetForegroundWindow()) # get current window text
+        new_win_tags = self.get_window_tags(new_win_title) # get current window tags
 
-            if not new_win_title and not self.minimized: # stops current time entry if all windows are minimized
-                self.update_entry(True)
+        if not new_win_title and not self.minimized: # stops current time entry if all windows are minimized
+            self.update_entry(True)
 
-            elif new_win_title and not new_win_tags and new_win_title != self.last_seen['title']: # create untagged time entry in case no tags are found
-                self.update_entry(False, new_win_title)
+        elif new_win_title and not new_win_tags and new_win_title != self.last_seen['title']: # create untagged time entry in case no tags are found
+            self.update_entry(False, new_win_title)
 
-            elif new_win_title and new_win_tags != self.last_seen['tags']: # create regular tagged entry
-                self.update_entry(False, new_win_title, new_win_tags)
-
-            time.sleep(self.exec_interval)
-
-
-if __name__ == '__main__':
-    auto = AutoClockify()
-
-
-   
-
-
-
-
-
-    
+        elif new_win_title and new_win_tags != self.last_seen['tags']: # create regular tagged entry
+            self.update_entry(False, new_win_title, new_win_tags)

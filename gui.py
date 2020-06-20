@@ -46,6 +46,9 @@ import sys
 from PyQt5 import QtCore, QtWidgets, QtGui, uic
 import os
 from AutoClockifyGUI import Ui_AutoClockifyGUI
+from auto_clockify import AutoClockify
+import threading
+import time
 
 
 class StatusWindow(QtWidgets.QWidget):
@@ -73,22 +76,35 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
     """
     def __init__(self, icon, parent=None):
         QtWidgets.QSystemTrayIcon.__init__(self, icon, parent)
-        self.setToolTip(f'Clockify AutoTracker')
+        self.setToolTip(f'Clockify AutoTracker - Disabled')
         menu = QtWidgets.QMenu(parent)
 
+        self.clockify = AutoClockify() # start Clockify tracker, actual tracking to be called later
+        self.should_stop = threading.Event() # threading event to monitor tracker start/stop
+        self.statusWindow = StatusWindow() # start status window, functions only show/hide it later
+        self.exec_interval = 1 # auto tracker runs every x seconds
+        
+        # menu options
         open_window = menu.addAction("Open Status Window")
         open_window.triggered.connect(self.show_status_window)
         open_window.setIcon(QtGui.QIcon("icon.png"))
 
+        open_window = menu.addAction("Start Thread")
+        open_window.triggered.connect(self.start_thread)
+        open_window.setIcon(QtGui.QIcon("icon.png"))
+
+        open_window = menu.addAction("Stop Thread")
+        open_window.triggered.connect(self.stop_thread)
+        open_window.setIcon(QtGui.QIcon("icon.png"))
+
         exit_ = menu.addAction("Exit")
-        exit_.triggered.connect(lambda: sys.exit())
+        exit_.triggered.connect(self.close_systray)
         exit_.setIcon(QtGui.QIcon("icon.png"))
 
         menu.addSeparator()
         self.setContextMenu(menu)
         self.activated.connect(self.onTrayIconActivated)
-        self.statusWindow = StatusWindow() # start status window, functions only show/hide it later
-
+        
 
     def onTrayIconActivated(self, reason):
         """
@@ -104,6 +120,51 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         self.statusWindow.show()
 
 
+    def tracking_thread(self, should_stop):
+        """ 
+            runs auto tracker check_window_change on separate thread 
+            thread will run in a loop every x seconds according to self.exec_interval variable
+            thread will stop once should_stop thread event is set
+        """
+        self.clockify.check_window_change()
+        while not should_stop.wait(self.exec_interval):
+            self.clockify.check_window_change()
+
+
+    def toggle_icon_tooltip(self, active: bool):
+        """ 
+            systray icon and tooltip represent tracker's status
+            when starting/stopping tracker, both should be updated according to bool parameter
+        """
+        icon_status = 'enabled' if active else 'disabled'
+        icon_path = os.path.join(os.path.dirname(__file__), 'icon_' + icon_status + '.png')
+        self.setIcon(QtGui.QIcon(icon_path))
+        self.setToolTip(f'Clockify AutoTracker - ' + icon_status.title())
+
+
+    def start_thread(self):
+        """ resets should_stop thread to execution interval and starts tracking thread """
+        self.should_stop.clear()
+        self.should_stop.wait(self.exec_interval)
+        thread = threading.Thread(target=self.tracking_thread, args=(self.should_stop,))
+        thread.start()
+        self.toggle_icon_tooltip(True)
+
+
+    def stop_thread(self):
+        """ stop tracking thread, including any possible currently running time entries """
+        self.clockify.handle_exit() 
+        self.should_stop.set() 
+        self.toggle_icon_tooltip(False)
+
+
+    def close_systray(self):
+        """ closes systray and tracking thread """
+        self.stop_thread() 
+        self.clockify = None
+        sys.exit()
+
+
 class Controller:
 
     def __init__(self):
@@ -111,7 +172,7 @@ class Controller:
 
 
     def show_tray(self):
-        icon_path = os.path.join(os.path.dirname(__file__), "icon.ico")
+        icon_path = os.path.join(os.path.dirname(__file__), "icon_disabled.png")
         self.tray = SystemTrayIcon(QtGui.QIcon(icon_path))
         self.tray.show()
 
@@ -121,7 +182,7 @@ def main():
     controller = Controller()
     controller.show_tray()
     sys.exit(app.exec_())
-
+    
 
 if __name__ == '__main__':
     main()
