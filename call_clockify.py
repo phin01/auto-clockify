@@ -23,10 +23,13 @@ class CallClockify():
 
     def get_tags(self) -> list:
         """ return list of tags from workspace """
-        URL = self.API_URL + 'workspaces/' + self.WSPACE + '/tags'
-        headers = {'X-Api-Key': self.API_KEY }
-        r = requests.get(url=URL, headers=headers)
-        return r.json() if r.status_code == 200 else False # return json list of tags if request goes through with no problems, otherwise False
+        URL = self.API_URL + 'workspaces/' + str(self.WSPACE) + '/tags'
+        headers = {'X-Api-Key': str(self.API_KEY) }
+        try:
+            r = requests.get(url=URL, headers=headers)
+            return r.json() if r.status_code == 200 else False # return json list of tags if request goes through with no problems, otherwise False
+        except:
+            return False
 
 
     def get_time(self) -> str:
@@ -39,15 +42,18 @@ class CallClockify():
             create new time entry using time(str) and tags(list) as input
             return True if status_code is 201 from a successful request
         """
-        URL = self.API_URL + 'workspaces/' + self.WSPACE + '/time-entries'
-        headers = {'X-Api-Key': self.API_KEY, 'Content-Type': 'application/json'} 
+        URL = self.API_URL + 'workspaces/' + str(self.WSPACE) + '/time-entries'
+        headers = {'X-Api-Key': str(self.API_KEY), 'Content-Type': 'application/json'} 
         payload = {
             "start": time,
             "description": title,
             "tagIds": tags
         }
-        r = requests.post(url=URL, headers=headers, json=payload)
-        return r.status_code == 201 # success
+        try:
+            r = requests.post(url=URL, headers=headers, json=payload)
+            return r.status_code == 201 # success
+        except:
+            return False
 
 
     def stop_time_entry(self, time: str) -> bool:
@@ -55,13 +61,16 @@ class CallClockify():
             stops currently running time entry, setting input time as end time
             returns True if status_code is 200 (successfully stopped) or 404 (no entry was running)
         """
-        URL = self.API_URL + 'workspaces/' + self.WSPACE + '/user/' + self.USER + '/time-entries'
-        headers = {'X-Api-Key': self.API_KEY, 'Content-Type': 'application/json'}
+        URL = self.API_URL + 'workspaces/' + str(self.WSPACE) + '/user/' + str(self.USER) + '/time-entries'
+        headers = {'X-Api-Key': str(self.API_KEY), 'Content-Type': 'application/json'}
         payload = { 
             "end": time
         } 
-        r = requests.patch(url=URL, headers=headers, json=payload)
-        return r.status_code == 200 or r.status_code == 404 # successfully stopped or no running time entries to be stopped
+        try:
+            r = requests.patch(url=URL, headers=headers, json=payload)
+            return r.status_code == 200 or r.status_code == 404 # successfully stopped or no running time entries to be stopped
+        except:
+            return False
 
 
     def check_login_info(self) -> bool:
@@ -72,13 +81,16 @@ class CallClockify():
         """
         URL = self.API_URL + 'user'
         headers = {'X-Api-Key': self.API_KEY }
-        r = requests.get(url=URL, headers=headers)
-        if r.status_code == 200:
-            self.USER = r.json()['id'] # sets user ID
-            URL = self.API_URL + 'workspaces'
+        try:
             r = requests.get(url=URL, headers=headers)
             if r.status_code == 200:
-                wspace = [wspace['id'] for wspace in r.json() if wspace['name'].upper() in self.WSPACENAME.upper()]
-                self.WSPACE = wspace[0] if wspace else False # sets workspace ID
+                self.USER = r.json()['id'] # sets user ID
+                URL = self.API_URL + 'workspaces'
+                r = requests.get(url=URL, headers=headers)
+                if r.status_code == 200:
+                    wspace = [wspace['id'] for wspace in r.json() if wspace['name'].upper() in self.WSPACENAME.upper()]
+                    self.WSPACE = wspace[0] if wspace else 'False' # sets workspace ID
 
-        return False if not self.USER or not self.WSPACE else True
+            return False if not self.USER or not self.WSPACE else True
+        except:
+            return False

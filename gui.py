@@ -128,15 +128,22 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         """
         self.clockify.check_window_change()
         while not should_stop.wait(self.exec_interval):
-            self.clockify.check_window_change()
+            return_code = self.clockify.check_window_change()
+            print(return_code)
+            if return_code != 0:
+                self.toggle_icon_tooltip(True, return_code)
 
 
-    def toggle_icon_tooltip(self, active: bool):
+    def toggle_icon_tooltip(self, active: bool, error_code=0):
         """ 
             systray icon and tooltip represent tracker's status
             when starting/stopping tracker, both should be updated according to bool parameter
         """
-        icon_status = 'enabled' if active else 'disabled'
+        if error_code == -1:
+            icon_status = 'error'
+        else:
+            icon_status = 'enabled' if active else 'disabled'
+
         icon_path = os.path.join(os.path.dirname(__file__), 'icon_' + icon_status + '.png')
         self.setIcon(QtGui.QIcon(icon_path))
         self.setToolTip(f'Clockify AutoTracker - ' + icon_status.title())
