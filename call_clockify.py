@@ -14,15 +14,19 @@ class CallClockify():
 
         loginInfo = LoginInfo()
         self.API_KEY = loginInfo.get_api_key() # API key
-        self.WSPACE = loginInfo.get_workspace() # workspace ID
-        self.USER = loginInfo.get_user() # Clockify user
+        self.WSPACENAME = loginInfo.get_workspace_name() # workspace name
+
+        self.WSPACE = None
+        self.USER = None
+        self.check_login_info() # sets user ID and workspace ID
 
 
     def get_tags(self) -> list:
         """ return list of tags from workspace """
         URL = self.API_URL + 'workspaces/' + self.WSPACE + '/tags'
         headers = {'X-Api-Key': self.API_KEY }
-        return requests.get(url=URL, headers=headers).json()
+        r = requests.get(url=URL, headers=headers)
+        return r.json() if r.status_code == 200 else False # return json list of tags if request goes through with no problems, otherwise False
 
 
     def get_time(self) -> str:
@@ -58,3 +62,23 @@ class CallClockify():
         } 
         r = requests.patch(url=URL, headers=headers, json=payload)
         return r.status_code == 200 or r.status_code == 404 # successfully stopped or no running time entries to be stopped
+
+
+    def check_login_info(self) -> bool:
+        """ 
+            based on api-key and workspace name provided in login_info.json file,
+            attempt to find user ID and workspace ID from clockify API
+            sets variables and return True if found, returns False if either can't be found
+        """
+        URL = self.API_URL + 'user'
+        headers = {'X-Api-Key': self.API_KEY }
+        r = requests.get(url=URL, headers=headers)
+        if r.status_code == 200:
+            self.USER = r.json()['id'] # sets user ID
+            URL = self.API_URL + 'workspaces'
+            r = requests.get(url=URL, headers=headers)
+            if r.status_code == 200:
+                wspace = [wspace['id'] for wspace in r.json() if wspace['name'].upper() in self.WSPACENAME.upper()]
+                self.WSPACE = wspace[0] if wspace else False # sets workspace ID
+
+        return False if not self.USER or not self.WSPACE else True

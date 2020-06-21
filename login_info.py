@@ -12,12 +12,8 @@ class LoginInfo():
 
 
     def get_api_key(self):
-        return self.info['clockify-api-key']
+        return self.info['clockify-api-key'] if self.info['clockify-api-key'] else False
 
 
-    def get_workspace(self):
-        return self.info['workspace-id']
-
-
-    def get_user(self):
-        return self.info['user-id']
+    def get_workspace_name(self):
+        return self.info['workspace-name'] if self.info['workspace-name'] else False
