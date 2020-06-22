@@ -48,24 +48,74 @@ import os
 from AutoClockifyGUI import Ui_AutoClockifyGUI
 from auto_clockify import AutoClockify
 import threading
-import time
+# import time
+import json
 
 
 class StatusWindow(QtWidgets.QWidget):
 
-    def __init__(self):
+    def __init__(self, parent, default_interval):
+        """ 
+            status window contains buttons to start/stop tracking thread, counters for failed/successful calls to API
+            and current tracking thread status (active or inactive)
+            user can customize window change check interval before starting thread (default interval received from config.json file)
+        """
         QtWidgets.QWidget.__init__(self)
         ui_path = os.path.join(os.path.dirname(__file__), "AutoClockifyGUI\\form.ui")
         self.ui = uic.loadUi(ui_path, self)
 
-        self.pushButton.clicked.connect(self.vai)
+        self.btnStartTracker.clicked.connect(self.start_tracker) # start tracker button routine
+        self.btnStopTracker.clicked.connect(self.stop_tracker) # stop tracker button routine
+
+        self.spinBoxInterval.setValue(default_interval) # set spinbox value as default interval from config.json file
+
+        self.sysTray = parent # systray parent object that will run start/stop functions
 
 
-    def vai(self):
-        print('vai')
+    def update_status_label(self, color: str, text: str):
+        """ update text and color of status label in status window """
+        self.lblStatus.setStyleSheet('color: ' + color)
+        self.lblStatus.setText(text)
+
+
+    def set_button_status(self, start_button: bool, stop_button: bool):
+        """ enable or disable buttons used to start/stop tracking thread """
+        self.btnStartTracker.setEnabled(start_button)
+        self.btnStopTracker.setEnabled(stop_button)
+    
+    
+    def start_tracker(self):
+        """ 
+            starts tracking thread using spinbox value as time interval
+            resets status label
+            toggles start/stop thread buttons
+        """
+        # self.sysTray.start_thread(self.spinBoxInterval.value())
+        self.sysTray.start_thread()
+        self.update_status_label('green', 'ACTIVE')
+        self.set_button_status(False, True)
+
+
+    def stop_tracker(self):
+        """ 
+            stops tracking thread
+            resets status label
+            toggles start/stop thread buttons
+        """
+        self.sysTray.stop_thread()
+        self.update_status_label('black', 'Inactive')
+        self.set_button_status(True, False)
+        
+
+
+    def update_counters(self, successful_updates, update_errors):
+        """ updates counter labels with number of successful and failed time entry calls to API """
+        self.lblSuccessCount.setText(str(successful_updates))
+        self.lblErrorCount.setText(str(update_errors))
 
 
     def closeEvent(self, event):
+        """ override close event for status window to only hide it (program should be closed from systray) """
         event.ignore()
         self.hide()
 
@@ -81,8 +131,14 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
 
         self.clockify = AutoClockify() # start Clockify tracker, actual tracking to be called later
         self.should_stop = threading.Event() # threading event to monitor tracker start/stop
-        self.statusWindow = StatusWindow() # start status window, functions only show/hide it later
-        self.exec_interval = 1 # auto tracker runs every x seconds
+        
+        print(type(self.get_default_interval()))
+        # self.exec_interval = self.get_default_interval()
+        self.exec_interval = 1
+        self.statusWindow = StatusWindow(self, self.exec_interval) # start status window, functions only show/hide it later
+
+        self.successful_updates = 0
+        self.update_errors = 0
         
         # menu options
         open_window = menu.addAction("Open Status Window")
@@ -128,10 +184,15 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         """
         self.clockify.check_window_change()
         while not should_stop.wait(self.exec_interval):
-            return_code = self.clockify.check_window_change()
+            return_code = self.clockify.check_window_change() # returns -1 if error, 1 if successful and 0 if no changes needed
             print(return_code)
             if return_code != 0:
                 self.toggle_icon_tooltip(True, return_code)
+                if return_code == 1:
+                    self.successful_updates += 1
+                else:
+                    self.update_errors += 1
+                self.statusWindow.update_counters(self.successful_updates, self.update_errors)
 
 
     def toggle_icon_tooltip(self, active: bool, error_code=0):
@@ -149,9 +210,11 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         self.setToolTip(f'Clockify AutoTracker - ' + icon_status.title())
 
 
+    #def start_thread(self, exec_interval: int):
     def start_thread(self):
         """ resets should_stop thread to execution interval and starts tracking thread """
         self.should_stop.clear()
+        # self.exec_interval = exec_interval
         self.should_stop.wait(self.exec_interval)
         thread = threading.Thread(target=self.tracking_thread, args=(self.should_stop,))
         thread.start()
@@ -163,6 +226,12 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         self.clockify.handle_exit() 
         self.should_stop.set() 
         self.toggle_icon_tooltip(False)
+
+
+    def get_default_interval(self) -> int:
+        json_path = os.path.join(os.path.dirname(__file__), "config.json")
+        config_info = json.load(open(json_path))
+        return config_info['default-interval'] if config_info['default-interval'] else 60 # set default as 60 in case it's not set in config.json file
 
 
     def close_systray(self):
