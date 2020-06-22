@@ -1,4 +1,6 @@
 import json
+import os
+
 
 class LoginInfo():
     """ 
@@ -8,7 +10,8 @@ class LoginInfo():
     """
 
     def __init__(self):
-        self.info = json.load(open('login_info.json'))
+        json_path = os.path.join(os.path.dirname(__file__), "config.json")
+        self.info = json.load(open(json_path))
 
 
     def get_api_key(self):
