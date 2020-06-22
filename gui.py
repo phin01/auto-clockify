@@ -48,7 +48,7 @@ import os
 from AutoClockifyGUI import Ui_AutoClockifyGUI
 from auto_clockify import AutoClockify
 import threading
-# import time
+import time
 import json
 
 
@@ -90,8 +90,7 @@ class StatusWindow(QtWidgets.QWidget):
             resets status label
             toggles start/stop thread buttons
         """
-        # self.sysTray.start_thread(self.spinBoxInterval.value())
-        self.sysTray.start_thread()
+        self.sysTray.start_thread(self.spinBoxInterval.value())
         self.update_status_label('green', 'ACTIVE')
         self.set_button_status(False, True)
 
@@ -133,8 +132,7 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         self.should_stop = threading.Event() # threading event to monitor tracker start/stop
         
         print(type(self.get_default_interval()))
-        # self.exec_interval = self.get_default_interval()
-        self.exec_interval = 1
+        self.exec_interval = self.get_default_interval()
         self.statusWindow = StatusWindow(self, self.exec_interval) # start status window, functions only show/hide it later
 
         self.successful_updates = 0
@@ -143,14 +141,6 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         # menu options
         open_window = menu.addAction("Open Status Window")
         open_window.triggered.connect(self.show_status_window)
-        open_window.setIcon(QtGui.QIcon("icon.png"))
-
-        open_window = menu.addAction("Start Thread")
-        open_window.triggered.connect(self.start_thread)
-        open_window.setIcon(QtGui.QIcon("icon.png"))
-
-        open_window = menu.addAction("Stop Thread")
-        open_window.triggered.connect(self.stop_thread)
         open_window.setIcon(QtGui.QIcon("icon.png"))
 
         exit_ = menu.addAction("Exit")
@@ -183,7 +173,7 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
             thread will stop once should_stop thread event is set
         """
         self.clockify.check_window_change()
-        while not should_stop.wait(self.exec_interval):
+        while should_stop.is_set():
             return_code = self.clockify.check_window_change() # returns -1 if error, 1 if successful and 0 if no changes needed
             print(return_code)
             if return_code != 0:
@@ -193,6 +183,7 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
                 else:
                     self.update_errors += 1
                 self.statusWindow.update_counters(self.successful_updates, self.update_errors)
+            time.sleep(self.exec_interval)
 
 
     def toggle_icon_tooltip(self, active: bool, error_code=0):
@@ -210,12 +201,11 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         self.setToolTip(f'Clockify AutoTracker - ' + icon_status.title())
 
 
-    #def start_thread(self, exec_interval: int):
-    def start_thread(self):
+    def start_thread(self, exec_interval: int):
         """ resets should_stop thread to execution interval and starts tracking thread """
-        self.should_stop.clear()
-        # self.exec_interval = exec_interval
-        self.should_stop.wait(self.exec_interval)
+        self.exec_interval = exec_interval
+        self.should_stop.set()
+
         thread = threading.Thread(target=self.tracking_thread, args=(self.should_stop,))
         thread.start()
         self.toggle_icon_tooltip(True)
@@ -224,7 +214,7 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
     def stop_thread(self):
         """ stop tracking thread, including any possible currently running time entries """
         self.clockify.handle_exit() 
-        self.should_stop.set() 
+        self.should_stop.clear()
         self.toggle_icon_tooltip(False)
 
 
