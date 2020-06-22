@@ -1,6 +1,6 @@
 import requests
 import datetime
-from login_info import LoginInfo
+from configs import AutoClockifyConfig
 
 
 class CallClockify():
@@ -12,9 +12,9 @@ class CallClockify():
     def __init__(self):
         self.API_URL = 'https://api.clockify.me/api/v1/' # clockify API root URL
 
-        loginInfo = LoginInfo()
-        self.API_KEY = loginInfo.get_api_key() # API key
-        self.WSPACENAME = loginInfo.get_workspace_name() # workspace name
+        configs = AutoClockifyConfig()
+        self.API_KEY = configs.get_api_key() # API key
+        self.WSPACENAME = configs.get_workspace_name() # workspace name
 
         self.WSPACE = None
         self.USER = None

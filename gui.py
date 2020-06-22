@@ -45,11 +45,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import sys
 from PyQt5 import QtCore, QtWidgets, QtGui, uic
 import os
-from AutoClockifyGUI import Ui_AutoClockifyGUI
 from auto_clockify import AutoClockify
+from configs import AutoClockifyConfig
 import threading
 import time
-import json
+# import json
+
 
 
 class StatusWindow(QtWidgets.QWidget):
@@ -127,12 +128,12 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         QtWidgets.QSystemTrayIcon.__init__(self, icon, parent)
         self.setToolTip(f'Clockify AutoTracker - Disabled')
         menu = QtWidgets.QMenu(parent)
+        configs = AutoClockifyConfig()
 
         self.clockify = AutoClockify() # start Clockify tracker, actual tracking to be called later
         self.should_stop = threading.Event() # threading event to monitor tracker start/stop
         
-        print(type(self.get_default_interval()))
-        self.exec_interval = self.get_default_interval()
+        self.exec_interval = configs.get_default_interval()
         self.statusWindow = StatusWindow(self, self.exec_interval) # start status window, functions only show/hide it later
 
         self.successful_updates = 0
@@ -216,12 +217,6 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
         self.clockify.handle_exit() 
         self.should_stop.clear()
         self.toggle_icon_tooltip(False)
-
-
-    def get_default_interval(self) -> int:
-        json_path = os.path.join(os.path.dirname(__file__), "config.json")
-        config_info = json.load(open(json_path))
-        return config_info['default-interval'] if config_info['default-interval'] else 60 # set default as 60 in case it's not set in config.json file
 
 
     def close_systray(self):
