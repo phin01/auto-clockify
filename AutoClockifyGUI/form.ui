@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>AutoClockifyGUI</class>
- <widget class="QWidget" name="AutoClockifyGUI">
+ <class>ClockifyAutoTracker</class>
+ <widget class="QWidget" name="ClockifyAutoTracker">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>AutoClockifyGUI</string>
+   <string>Clockify Auto Tracker</string>
   </property>
   <widget class="QPushButton" name="btnStartTracker">
    <property name="geometry">
@@ -153,7 +153,7 @@
   <widget class="QSpinBox" name="spinBoxInterval">
    <property name="geometry">
     <rect>
-     <x>60</x>
+     <x>240</x>
      <y>130</y>
      <width>42</width>
      <height>22</height>
@@ -167,6 +167,38 @@
    </property>
    <property name="singleStep">
     <number>30</number>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>80</x>
+     <y>130</y>
+     <width>131</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Tracker Interval:</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
+    <rect>
+     <x>290</x>
+     <y>130</y>
+     <width>131</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>seconds</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
    </property>
   </widget>
  </widget>
