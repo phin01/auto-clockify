@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+
 """
 Name: System Tray Application
 Author :  Rajiv Sharma
@@ -49,8 +52,6 @@ from auto_clockify import AutoClockify
 from configs import AutoClockifyConfig
 import threading
 import time
-# import json
-
 
 
 class StatusWindow(QtWidgets.QWidget):
@@ -221,6 +222,8 @@ class SystemTrayIcon(QtWidgets.QSystemTrayIcon):
 
     def close_systray(self):
         """ closes systray and tracking thread """
+        self.hide()
+        self.statusWindow.hide()
         self.stop_thread() 
         self.clockify = None
         sys.exit()
