@@ -1,5 +1,8 @@
 import time
-from win32gui import GetWindowText, GetForegroundWindow
+from win32gui import GetWindowText, GetForegroundWindow, FindWindow
+import win32process
+import win32api
+import win32con
 from call_clockify import CallClockify
 import threading
 
@@ -74,13 +77,18 @@ class AutoClockify():
         new_win_title = GetWindowText(GetForegroundWindow()) # get current window text
         new_win_tags = self.get_window_tags(new_win_title) # get current window tags
 
+        hwnd = FindWindow(None, new_win_title)
+        processid = win32process.GetWindowThreadProcessId(hwnd)
+        pshandle = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, processid[1])
+        exename = win32process.GetModuleFileNameEx(pshandle, 0)
+
         if not new_win_title and not self.minimized: # stops current time entry if all windows are minimized
             return -1 if not self.update_entry(True) else 1
 
         elif new_win_title and not new_win_tags and new_win_title != self.last_seen['title']: # create untagged time entry in case no tags are found
-            return -1 if not self.update_entry(False, new_win_title) else 1
+            return -1 if not self.update_entry(False, exename) else 1
 
         elif new_win_title and new_win_tags != self.last_seen['tags']: # create regular tagged entry
-            return -1 if not self.update_entry(False, new_win_title, new_win_tags) else 1
+            return -1 if not self.update_entry(False, exename, new_win_tags) else 1
         else:
             return 0
