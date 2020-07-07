@@ -5,6 +5,7 @@ import win32api
 import win32con
 from call_clockify import CallClockify
 import threading
+from local_log import LocalLog
 
 class AutoClockify():
 
@@ -21,6 +22,8 @@ class AutoClockify():
         self.tags = self.clockify.get_tags() # list of tags from Clockify API (returns False if tags couldn't be found)
         self.last_seen = {'xid': None, 'title': None, 'program': None, 'tags': None}  # initializes list to hold previous window's info
         self.minimized = False # all windows minimized (stops time entries)
+
+        self.local_log = LocalLog()
 
         # initialize last_seen window and program with first available window after running script
         wnd = GetWindowText(GetForegroundWindow())
@@ -45,6 +48,15 @@ class AutoClockify():
     def handle_exit(self):
         """ stops current Clockify entry when program is closed """
         self.clockify.stop_time_entry(self.clockify.get_time())
+
+
+    def normalize_string(self, new_string):
+        new_string = new_string.replace('"', '-')
+        new_string = new_string.replace('\\', '-')
+        new_string = new_string.replace("'", "-")
+        new_string = new_string.replace('/', '-')
+        return new_string
+
 
 
     def update_entry(self, new_minimized: bool, new_win_title=None, new_win_tags=None) -> bool:
@@ -82,13 +94,27 @@ class AutoClockify():
         pshandle = win32api.OpenProcess(win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ, False, processid[1])
         exename = win32process.GetModuleFileNameEx(pshandle, 0)
 
+        # local log routine
+        try:
+            if not new_win_title:
+                self.local_log.create_log_entry("Minimized", self.normalize_string(exename))
+            else:
+                self.local_log.create_log_entry(self.normalize_string(new_win_title), self.normalize_string(exename))
+        except:
+            print('Could not log to local file!')
+
+            
+
         if not new_win_title and not self.minimized: # stops current time entry if all windows are minimized
-            return -1 if not self.update_entry(True) else 1
+            # return -1 if not self.update_entry(True) else 1
+            return 0
 
         elif new_win_title and not new_win_tags and new_win_title != self.last_seen['title']: # create untagged time entry in case no tags are found
-            return -1 if not self.update_entry(False, exename) else 1
+            # return -1 if not self.update_entry(False, exename) else 1
+            return 0
 
         elif new_win_title and new_win_tags != self.last_seen['tags']: # create regular tagged entry
-            return -1 if not self.update_entry(False, exename, new_win_tags) else 1
+            # return -1 if not self.update_entry(False, exename, new_win_tags) else 1
+            return 0
         else:
             return 0

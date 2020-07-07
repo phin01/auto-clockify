@@ -25,3 +25,7 @@ class AutoClockifyConfig():
 
     def get_default_interval(self):
         return self.info['default-interval'] if self.info['default-interval'] else 60 # return 60 seconds in case default-interval can't be found
+
+
+    def get_local_log_path(self):
+        return self.info['local-log-path'] if self.info['local-log-path'] else False
